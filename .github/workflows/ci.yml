@@ -1,0 +1,21 @@
+# NOTE: written but never executed (no CI access when it was authored). First run may need small fixes.
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg unzip
+      - run: npm test            # unit + codec interop with native ffmpeg
+      - run: npm run build       # fails if app code > 200 KB gzip
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install playwright && python -m playwright install --with-deps chromium
+      - name: e2e (Chromium)
+        run: |
+          ffmpeg -f lavfi -i "sine=f=220:d=60" -f lavfi -i "anoisesrc=d=60:a=0.2" -filter_complex "[0][1]amix=inputs=2,aformat=channel_layouts=stereo" -c:a flac /tmp/e2e.flac
+          node serve.mjs 4173 & sleep 2
+          mkdir -p /tmp/e2e && python3 tests/e2e/e2e.py /tmp/e2e.flac 3

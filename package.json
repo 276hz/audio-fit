@@ -1,0 +1,14 @@
+{
+  "name": "audio-fit",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "build": "node build.mjs",
+    "serve": "node serve.mjs"
+  }
+}

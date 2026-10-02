@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audio Fit — make audio fit a size limit, privately in your browser</title>
+<meta name="description" content="Tells you whether your audio can fit a file-size limit without losing quality, splits lossless files at quiet moments, and proves it with a hash. Your files never leave your device.">
+<meta property="og:title" content="Audio Fit — audio that fits, verified">
+<meta property="og:description" content="Lossless split at silence, bit-exact verification, 100% in your browser.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#007F73">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./style.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Audio Fit","applicationCategory":"MultimediaApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+</head>
+<body>
+<a class="skip" href="#stage" data-i18n="a11y.skip">Skip to the file drop area</a>
+<header class="top">
+  <a class="brand" href="./">Audio Fit</a>
+  <nav aria-label="Pages"><a href="#how" data-i18n="nav.how">How it works</a><a href="#privacy" data-i18n="nav.privacy">Privacy</a><a href="#faq" data-i18n="nav.faq">FAQ</a></nav>
+  <label class="sr" for="lang" data-i18n="a11y.lang">Language</label>
+  <select id="lang"><option value="vi">Tiếng Việt</option><option value="en">English</option></select>
+  <button id="theme" type="button" class="icon" data-i18n-aria="a11y.theme" aria-label="Switch light/dark">◐</button>
+</header>
+<main>
+  <section class="hero">
+    <h1 data-i18n="hero.title">Tells you what is possible, then does the rest.</h1>
+    <p class="lead" data-i18n="hero.sub">Check whether your audio can meet a size limit without losing quality. Split it at a quiet moment if it can't. Prove nothing changed with a hash. No upload.</p>
+    <div id="stage" role="button" tabindex="0" data-i18n-aria="stage.aria" aria-label="Choose or drop an audio file">
+      <canvas id="wave" aria-hidden="true"></canvas>
+      <div class="stage-text"><strong data-i18n="stage.drop">Drop a FLAC or WAV file here, or click to choose</strong><span id="stage-name"></span><small data-i18n="stage.private">Your file never leaves your device.</small></div>
+    </div>
+    <input id="file" type="file" accept=".flac,.wav,audio/flac,audio/x-flac,audio/wav,audio/x-wav" hidden>
+    <p class="muted small" data-i18n="stage.formats">This version reads FLAC and WAV (16/24-bit, mono/stereo). Other formats need the codec engine, which is not included yet.</p>
+    <div id="busy" class="busy" hidden><span id="phase"></span><progress id="prog" max="1"></progress><span id="prog-pct"></span><span id="eta" class="muted"></span><button id="cancel" type="button" class="btn small" hidden data-i18n="run.cancel">Cancel</button></div>
+    <div id="live" class="sr" aria-live="polite"></div><span id="status-line" class="sr"></span>
+  </section>
+  <section id="error" class="panel err" hidden></section>
+  <section id="fileinfo" class="panel" hidden></section>
+  <div id="preview-wrap" class="panel slim" hidden><label for="preview" class="small muted" data-i18n="info.preview">Listen to the original</label><audio id="preview" controls preload="none"></audio></div>
+  <section id="target" class="panel" hidden>
+    <h2 data-i18n="target.title">Target</h2>
+    <div id="modes" class="seg" role="group" data-i18n-aria="target.title" aria-label="Target">
+      <button type="button" data-mode="profile" aria-pressed="true" data-i18n="target.byPlatform">By platform</button>
+      <button type="button" data-mode="custom" aria-pressed="false" data-i18n="target.custom">Custom</button>
+    </div>
+    <div id="mode-profile" class="fields"><label for="profile" data-i18n="target.platform">Platform</label><select id="profile"></select></div>
+    <div id="mode-custom" class="fields" hidden>
+      <label for="c-mb" data-i18n="target.maxMb">Maximum size (MB)</label>
+      <div class="inline"><input id="c-mb" type="number" inputmode="decimal" min="0.1" step="0.1" value="50"><span id="presets"><button type="button" class="btn small" data-mb="25">25</button><button type="button" class="btn small" data-mb="50">50</button><button type="button" class="btn small" data-mb="100">100</button></span></div>
+      <fieldset><legend data-i18n="target.formats">Accepted formats</legend><div id="c-formats" class="chips"></div></fieldset>
+      <label for="c-sr" data-i18n="target.minRate">Minimum sample rate</label>
+      <select id="c-sr"><option value="0">—</option><option value="44100">44.1 kHz</option><option value="48000">48 kHz</option><option value="96000">96 kHz</option></select>
+      <label for="c-bits" data-i18n="target.minDepth">Minimum bit depth</label>
+      <select id="c-bits"><option value="0">—</option><option value="16">16</option><option value="24">24</option></select>
+      <label class="check-l"><input id="c-lossy" type="checkbox"> <span data-i18n="target.allowLossy">Allow lossy formats</span></label>
+    </div>
+    <label class="check-l"><input id="allow-split" type="checkbox" checked> <span data-i18n="target.allowSplit">Allow splitting into parts</span></label>
+  </section>
+  <section id="verdict" class="panel"></section>
+  <section id="options" class="panel"></section>
+  <div id="run-wrap" class="runbar" hidden><button id="run" type="button" class="btn primary" disabled data-i18n="run.go">Run</button></div>
+  <section id="result" class="panel good-panel" hidden></section>
+
+  <section id="how" class="doc"><h2 data-i18n="how.title">How it works</h2>
+    <p data-i18n="how.p1">Lossless formats such as FLAC already squeeze audio as far as it goes. A second pass typically saves under 1%. If a file is over a limit, no lossless trick makes it smaller.</p>
+    <p data-i18n="how.p2">So the app first measures, then tells you honestly: it fits, or it does not. When it does not, the lossless answer is to split the track at a quiet moment into parts that each fit. Cuts land on an exact sample.</p>
+    <p data-i18n="how.p3">After every run the app decodes what it produced, joins the parts and compares a SHA-256 hash of the audio samples with your original. Only an exact match is labelled bit-exact.</p></section>
+  <section id="privacy" class="doc"><h2 data-i18n="privacy.title">Privacy</h2>
+    <p data-i18n="privacy.p1">Everything runs inside this page, in a background worker on your device. Audio, file names and tags are never uploaded or sent anywhere.</p>
+    <p data-i18n="privacy.p2">There is no tracking, no analytics, no ads and no account. The page only stores your language and theme choice in your browser, and only if storage is allowed. You can check the Network tab of your browser: after the page loads, there is no request that contains your data.</p></section>
+  <section id="license" class="doc"><h2 data-i18n="license.title">Licences and credits</h2>
+    <p data-i18n="license.p1">This build contains no third-party codec or library. The FLAC reader and writer, the hash and the ZIP writer were written for this project following the public FLAC format specification. MP3, AAC and Opus export will need a codec engine; its licence terms will be listed here when it is added.</p></section>
+  <section id="faq" class="doc"><h2 data-i18n="faq.title">Frequently asked questions</h2>
+    <h3 data-i18n="faq.q1">Why can't my FLAC shrink to the limit?</h3><p data-i18n="faq.a1">FLAC is already compressed without loss. Lossless compression has a floor set by the music itself. Going below it requires removing information, which is lossy.</p>
+    <h3 data-i18n="faq.q2">Is splitting really lossless?</h3><p data-i18n="faq.a2">Yes. The parts contain exactly the original samples. The report lists the hash that proves it. Check that your platform accepts multi-part releases.</p>
+    <h3 data-i18n="faq.q3">Are the platform limits up to date?</h3><p data-i18n="faq.a3">Requirements change. Always check the platform's own page. Profiles marked unverified come from text you supplied, not from the platform's documentation.</p>
+    <h3 data-i18n="faq.q4">How big a file can I use?</h3><p data-i18n="faq.a4">Decoded audio is held in memory, so very large files can fail, mostly on phones. The app tells you if a file is too big; use a computer in that case.</p></section>
+</main>
+<footer><small data-i18n="footer.note">Requirements of other platforms may change; check their pages. Audio never leaves your device.</small></footer>
+<script type="module" src="./js/app/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "profiles": [
+    {
+      "id": "distribution-generic",
+      "name": "Distribution (generic)",
+      "allowedFormats": ["wav", "flac", "aiff"],
+      "minSampleRate": 44100,
+      "minBitDepth": 16,
+      "maxBytes": 50000000,
+      "allowLossy": false,
+      "source": "User-supplied requirement text: WAV, FLAC or AIFF, min 44.1 kHz 16-bit, max 50 MB",
+      "verified": "not-verified-against-official-docs",
+      "note": "Requirements may change; check the platform's own page."
+    }
+  ]
+}
